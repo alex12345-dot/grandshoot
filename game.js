@@ -48,6 +48,12 @@ for (let y = world.blockSize; y < world.height; y += segment) horizontalRoads.pu
 const blockDecor = buildBlockDecor();
 const cars = Array.from({ length: 26 }, () => spawnCar());
 const peds = Array.from({ length: 75 }, () => spawnPed());
+  color: "#76f08e",
+};
+
+const camera = { x: 0, y: 0 };
+const cars = Array.from({ length: 22 }, () => spawnCar());
+const peds = Array.from({ length: 60 }, () => spawnPed());
 const pickups = [];
 
 function currentDifficulty() {
@@ -97,6 +103,22 @@ function spawnCar() {
   ];
   const [base, roof] = palettes[Math.floor(rand(0, palettes.length))];
   return { x, y, w: 34, h: 18, vx, vy, base, roof };
+function spawnCar() {
+  const onHorizontal = Math.random() > 0.5;
+  const laneOffset = rand(-22, 22);
+  let x, y, vx, vy;
+  if (onHorizontal) {
+    y = pickRoadCenter() + laneOffset;
+    x = rand(0, world.width);
+    vx = rand(1.2, 2.6) * (Math.random() > 0.5 ? 1 : -1);
+    vy = 0;
+  } else {
+    x = pickRoadCenter() + laneOffset;
+    y = rand(0, world.height);
+    vx = 0;
+    vy = rand(1.2, 2.6) * (Math.random() > 0.5 ? 1 : -1);
+  }
+  return { x, y, w: 34, h: 18, vx, vy, color: `hsl(${rand(0, 360)} 70% 58%)` };
 }
 
 function spawnPed() {
@@ -118,6 +140,14 @@ function pickRoadCenter(axis) {
   }
   const x = verticalRoads[Math.floor(rand(0, verticalRoads.length))] ?? world.blockSize;
   return x + world.roadSize / 2;
+    color: `hsl(${rand(0, 360)} 50% 70%)`,
+  };
+}
+
+function pickRoadCenter() {
+  const segment = world.blockSize + world.roadSize;
+  const index = Math.floor(rand(0, world.width / segment));
+  return index * segment + world.blockSize + world.roadSize / 2;
 }
 
 function initMission() {
@@ -147,6 +177,8 @@ function restartGame() {
   player.sprint = d.sprint;
   cars.splice(0, cars.length, ...Array.from({ length: 26 }, () => spawnCar()));
   peds.splice(0, peds.length, ...Array.from({ length: 75 }, () => spawnPed()));
+  cars.splice(0, cars.length, ...Array.from({ length: 22 }, () => spawnCar()));
+  peds.splice(0, peds.length, ...Array.from({ length: 60 }, () => spawnPed()));
   pickups.length = 0;
   initMission();
 }
@@ -291,12 +323,58 @@ function drawPlayer() {
   ctx.fillStyle = "#1e2f45";
   ctx.fillRect(-4, 7, 3, 6);
   ctx.fillRect(1, 7, 3, 6);
+function drawMap() {
+  ctx.fillStyle = "#2a5b35";
+  ctx.fillRect(0, 0, world.width, world.height);
+  const segment = world.blockSize + world.roadSize;
+  ctx.fillStyle = "#31363f";
+  for (let x = world.blockSize; x < world.width; x += segment) ctx.fillRect(x, 0, world.roadSize, world.height);
+  for (let y = world.blockSize; y < world.height; y += segment) ctx.fillRect(0, y, world.width, world.roadSize);
+  ctx.strokeStyle = "#ecf0a4";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([14, 14]);
+  for (let x = world.blockSize + world.roadSize / 2; x < world.width; x += segment) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, world.height);
+    ctx.stroke();
+  }
+  for (let y = world.blockSize + world.roadSize / 2; y < world.height; y += segment) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(world.width, y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function drawEntityRect(e) {
+  ctx.fillStyle = e.color;
+  ctx.fillRect(e.x - e.w / 2, e.y - e.h / 2, e.w, e.h);
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.strokeRect(e.x - e.w / 2, e.y - e.h / 2, e.w, e.h);
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+  if (state.inVehicle) {
+    ctx.fillStyle = "#ffe57f";
+    ctx.fillRect(-11, -7, 22, 14);
+  } else {
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, player.size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
 function drawMission() {
   if (!state.mission) return;
   const pulse = 14 + Math.sin(performance.now() / 180) * 5;
+  const pulse = 12 + Math.sin(performance.now() / 180) * 5;
   ctx.strokeStyle = "#6cf3ff";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -332,6 +410,10 @@ function handleInput() {
     const car = state.inVehicle;
     car.vx = dx * 4.6;
     car.vy = dy * 4.6;
+  if (state.inVehicle) {
+    const car = state.inVehicle;
+    car.vx = dx * 4.5;
+    car.vy = dy * 4.5;
     car.x += car.vx;
     car.y += car.vy;
     player.x = car.x;
@@ -358,6 +440,7 @@ function updateCars() {
     if (car.y > world.height + 50) car.y = -50;
 
     if (intersectsCircleRect(player.x, player.y, player.size / 2, car.x - 18, car.y - 18, 36, 36)) {
+    if (intersectsCircleRect(player.x, player.y, player.size / 2, car.x - car.w / 2, car.y - car.h / 2, car.w, car.h)) {
       player.hp -= 0.18;
       if (!state.inVehicle) state.wanted = clamp(state.wanted + 0.002, 0, 5);
     }
@@ -381,6 +464,11 @@ function updatePeds() {
     const dy = p.y - player.y;
     const d = Math.hypot(dx, dy);
 
+    if (p.x < 0 || p.x > world.width) p.vx *= -1;
+    if (p.y < 0 || p.y > world.height) p.vy *= -1;
+    const dx = p.x - player.x;
+    const dy = p.y - player.y;
+    const d = Math.hypot(dx, dy);
     if (d < 42) {
       p.vx = (dx / (d || 1)) * 2.2;
       p.vy = (dy / (d || 1)) * 2.2;
@@ -418,6 +506,7 @@ function updatePickups() {
     });
   }
 
+  if (Math.random() > 0.995 && pickups.length < 4) pickups.push({ x: rand(80, world.width - 80), y: rand(80, world.height - 80), type: Math.random() > 0.5 ? "cash" : "heal", ttl: 20 });
   for (let i = pickups.length - 1; i >= 0; i--) {
     const item = pickups[i];
     item.ttl -= 1 / 60;
@@ -445,6 +534,8 @@ function drawPickups() {
       ctx.fillRect(item.x - 2, item.y - 6, 4, 12);
       ctx.fillRect(item.x - 6, item.y - 2, 12, 4);
     }
+    ctx.fillStyle = item.type === "cash" ? "#ffd166" : "#ff6b6b";
+    ctx.fillRect(item.x - 8, item.y - 8, 16, 16);
   }
 }
 
@@ -458,6 +549,8 @@ function tryEnterExitVehicle() {
 
   let closest = null;
   let best = 52;
+  let closest = null;
+  let best = 48;
   for (const car of cars) {
     const d = Math.hypot(player.x - car.x, player.y - car.y);
     if (d < best) {
@@ -486,6 +579,9 @@ function updateUI() {
   if (state.mission) {
     missionEl.innerHTML = `<strong>${state.mission.label}</strong><br>${state.mission.objective}<br>Tempo missione: ${Math.ceil(state.mission.ttl)}s`;
   }
+  const stars = "★".repeat(Math.floor(state.wanted));
+  statsEl.innerHTML = `<strong>Punteggio:</strong> ${Math.floor(state.score)}<br><strong>Vita:</strong> ${Math.floor(player.hp)} / 100<br><strong>Ricercato:</strong> ${stars || "-"}<br><strong>Tempo:</strong> ${Math.ceil(state.time)}s`;
+  if (state.mission) missionEl.innerHTML = `<strong>${state.mission.label}</strong><br>${state.mission.objective}<br>Tempo missione: ${Math.ceil(state.mission.ttl)}s`;
 }
 
 function updateCamera() {
@@ -506,6 +602,17 @@ function draw() {
   if (state.inVehicle) drawCar(state.inVehicle);
   drawPlayer();
 
+  drawMap();
+  drawMission();
+  drawPickups();
+  for (const car of cars) drawEntityRect(car);
+  for (const p of peds) {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  drawPlayer();
   ctx.restore();
 
   if (state.message && state.started) {
@@ -553,6 +660,8 @@ function loop(now) {
     state.time -= dt;
     state.wanted = clamp(state.wanted - 0.03 * dt, 0, 5);
 
+    state.time -= dt;
+    state.wanted = clamp(state.wanted - 0.03 * dt, 0, 5);
     if (player.hp <= 0 || state.time <= 0) {
       state.over = true;
       state.message = "";
