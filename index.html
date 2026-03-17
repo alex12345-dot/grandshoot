@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grand Shoot - GTA2 Inspired</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="hud-panel">
+        <h1>Grand Shoot</h1>
+        <p class="subtitle">Ispirato ai sandbox top-down anni 90</p>
+
+        <div class="start-box">
+          <label for="difficulty"><strong>Difficoltà:</strong></label>
+          <select id="difficulty">
+            <option value="easy">Facile</option>
+            <option value="normal" selected>Normale</option>
+            <option value="hard">Difficile</option>
+          </select>
+          <button id="startBtn" type="button">Inizia partita</button>
+          <p class="hint">Premi il pulsante per avviare, poi usa tastiera o frecce.</p>
+        </div>
+
+        <ul class="hud-list">
+          <li><strong>WASD / Frecce</strong>: guida e movimento</li>
+          <li><strong>Spazio</strong>: entra/esci dal veicolo più vicino</li>
+          <li><strong>Shift</strong>: sprint (a piedi)</li>
+          <li><strong>R</strong>: riavvia partita</li>
+        </ul>
+        <div id="stats" class="stats"></div>
+        <div id="mission" class="mission"></div>
+        <p class="note">
+          Nota: non usa asset ufficiali. È un prototipo originale ispirato al gameplay.
+        </p>
+      </section>
+      <section class="game-panel">
+        <canvas id="game" width="960" height="640" aria-label="Mappa di gioco" tabindex="0"></canvas>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
